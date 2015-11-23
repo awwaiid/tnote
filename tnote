@@ -1,0 +1,34 @@
+#!/bin/bash
+
+ARGS="$*"
+
+if [[ "$ARGS" == "" ]] ; then
+  task +jrnl
+  exit
+fi
+
+if [[ "$ARGS" == "all" ]] ; then
+  task +jrnl all
+  exit
+fi
+
+UUID=$(task $ARGS _uuids | head -1)
+DESC=$(task $UUID rc.report.all.columns=description rc.report.all.labels= rc.verbose= all)
+TAGS=$(task $UUID _unique tags | tr , \\n | sort -u | grep -v 'next\|nocal\|nocolor\|nonag\|jrnl' | perl -pe 's/^/@/' | tr '\n' ' ')
+
+# echo "Input:"
+# echo "  uuid=$UUID"
+# echo "  desc=$DESC"
+# echo "  args=$ARGS"
+# echo "  tags=$TAGS"
+
+if [[ "$UUID" == "" ]] ; then
+  echo "Task '$ARGS' not found"
+  exit
+fi
+
+# echo "Tagging task with +jrnl"
+task rc.recurrence.confirmation=no $UUID modify +jrnl # >/dev/null
+
+jrnl --tags | grep $UUID >/dev/null || jrnl now: "Task - $DESC\\n\\n@$UUID\\n$TAGS"; jrnl @$UUID --edit
+
